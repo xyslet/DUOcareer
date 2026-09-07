@@ -5,7 +5,8 @@ function PointLesson({ onBack }) {
   const [answer, setAnswer] = useState('')
   const [checked, setChecked] = useState(false)
 
-  
+  // NOVO: Estado para controlar a animação de carregamento
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -20,7 +21,18 @@ function PointLesson({ onBack }) {
       return
     }
 
-    setChecked(true)
+    // NOVO: Inicia o processo de análise e esconde feedbacks antigos
+    setIsAnalyzing(true)
+    setChecked(false)
+
+    // NOVO: Simula o tempo que a IA leva para pensar (ex: 2.5 segundos)
+    setTimeout(() => {
+      setIsAnalyzing(false) // Para de analisar
+      setChecked(true)      // Mostra o feedback final
+    }, 2500)
+
+
+    // temporariamente desativado: setChecked(true)
   }
 
   return (
@@ -79,19 +91,28 @@ function PointLesson({ onBack }) {
             value={answer}
             onChange={(event) => setAnswer(event.target.value)}
             placeholder="Escreva sua resposta..."
+            disabled={isAnalyzing} // NOVO: Bloqueia digitação enquanto analisa
           />
 
           <button
             className="check-button"
             onClick={checkAnswer}
+            disabled={isAnalyzing} // NOVO: Desabilita o botão para evitar vários cliques
           >
-            VERIFICAR
+            {isAnalyzing ? 'ANALISANDO...' : 'VERIFICAR'}
           </button>
 
-          {checked && (
+          {/* NOVO: Componente que aparece enquanto a IA "pensa" */}
+          {isAnalyzing && (
+            <div className="loading-feedback">
+              Analisando sua resposta...
+            </div>
+          )}
+
+          {/* SÓ MOSTRA SE: O check finalizou e não está mais analisando */}
+          {checked && !isAnalyzing && (
             <div className="fake-feedback">
               <strong>Hmm... é quase isso.</strong>
-
               <p>
                 Essa é uma resposta de exemplo.
                 Em breve, uma IA irá analisar sua resposta.
