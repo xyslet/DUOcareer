@@ -18,7 +18,9 @@ function App() {
 
   if (selectedPoint !== null) {
     return (
-      <PointLesson onBack={closePoint} />
+      <PointLesson
+      onBack={closePoint} 
+      />
     )
   }
 

@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
+import { evaluateAnswer } from '../utils/answerEvaluator'
 
 function PointLesson({ onBack }) {
   const [showQuestion, setShowQuestion] = useState(false)
   const [answer, setAnswer] = useState('')
-  const [checked, setChecked] = useState(false)
+  const [result, setResult] = useState(null)
+  const [attempts, setAttempts] = useState(0)
+  const [showAnswer, setShowAnswer] = useState(false)
 
   // NOVO: Estado para controlar a animação de carregamento
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -17,23 +20,27 @@ function PointLesson({ onBack }) {
   }, [])
 
   function checkAnswer() {
-    if (answer.trim() === '') {
-      return
-    }
-
-    // NOVO: Inicia o processo de análise e esconde feedbacks antigos
-    setIsAnalyzing(true)
-    setChecked(false)
-
-    // NOVO: Simula o tempo que a IA leva para pensar (ex: 2.5 segundos)
-    setTimeout(() => {
-      setIsAnalyzing(false) // Para de analisar
-      setChecked(true)      // Mostra o feedback final
-    }, 2500)
-
-
-    // temporariamente desativado: setChecked(true)
+  if (answer.trim() === '') {
+    return
   }
+
+  setIsAnalyzing(true)
+  setResult(null)
+
+
+  setTimeout(() => {
+    const evaluation = evaluateAnswer(answer)
+
+    setIsAnalyzing(false)
+    setResult(evaluation)
+
+
+    if (evaluation.result !== 'correct') {
+      setAttempts((current) => current + 1)
+      console.log('Tentativa número:', attempts + 1)
+    }
+  }, 2500)
+}
 
   return (
     <section className="lesson">
@@ -109,20 +116,42 @@ function PointLesson({ onBack }) {
             </div>
           )}
 
-          {/* SÓ MOSTRA SE: O check finalizou e não está mais analisando */}
-          {checked && !isAnalyzing && (
-            <div className="fake-feedback">
-              <strong>Hmm... é quase isso.</strong>
-              <p>
-                Essa é uma resposta de exemplo.
-                Em breve, uma IA irá analisar sua resposta.
-              </p>
+          {result && !isAnalyzing && (
+            <div className={`feedback ${result.result}`}>
+
+              <strong>{result.message}</strong>
+
+              <p>{result.explanation}</p>
+
+              {result.hint && (
+                <div className="hint">
+                  💡 {result.hint}
+                </div>
+              )}
+
+              {showAnswer && (
+                <div className="expected-answer">
+                  <span>RESPOSTA ESPERADA</span>
+
+                  <p>{result.expectedAnswer}</p>
+                </div>
+              )}
+
+              {attempts >= 5 && !showAnswer && result.result !== 'correct' && (
+                <button
+                  className="reveal-button"
+                  onClick={() => setShowAnswer(true)}
+                >
+                  REVELAR RESPOSTA
+                </button>
+              )}
+
             </div>
           )}
 
+
         </div>
       )}
-
     </section>
   )
 }
