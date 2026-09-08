@@ -4,41 +4,47 @@ export const points = [
     title: 'Introdução à carreira profissional',
 
     introduction:
-      'Antes de construir uma carreira, é importante entender o que significa desenvolver-se profissionalmente.',
-
-    content: [
-      'Uma carreira profissional é construída ao longo do tempo por meio de experiências, conhecimentos, habilidades e decisões que ajudam uma pessoa a alcançar seus objetivos.',
-
-      'Ela não precisa seguir um caminho completamente planejado. É normal descobrir novos interesses, mudar de área e desenvolver novas competências durante esse processo.'
-    ],
+      'Uma carreira profissional é construída ao longo do tempo por meio de escolhas, experiências e aprendizados.',
 
     questions: [
       {
         id: 1,
-        type: 'text',
+
+        content:
+          'Uma carreira profissional não é construída de uma única vez. Ela se desenvolve conforme uma pessoa adquire conhecimentos, desenvolve habilidades e passa por diferentes experiências. Estudos, cursos, projetos, trabalhos e até situações em que algo não saiu como esperado podem contribuir para esse desenvolvimento.',
+
         question:
-          'Por que uma carreira profissional não precisa seguir um caminho completamente planejado?',
+          'Por que uma carreira profissional é construída ao longo do tempo?',
+
         expectedAnswer:
-          'Uma carreira pode mudar porque novas experiências, interesses e oportunidades podem surgir ao longo do tempo.'
+          'Porque uma pessoa desenvolve conhecimentos, habilidades e experiências ao longo da vida profissional.'
       },
 
       {
         id: 2,
-        type: 'text',
+
+        content:
+          'Profissão e carreira estão relacionadas, mas não significam exatamente a mesma coisa. A profissão representa uma área de atuação, enquanto a carreira envolve o caminho profissional construído por uma pessoa. Esse caminho pode incluir diferentes empregos, funções, experiências e até mudanças de área.',
+
         question:
-          'Quais elementos podem ajudar uma pessoa a construir sua carreira profissional?',
+          'Qual é a diferença entre profissão e carreira?',
+
         expectedAnswer:
-          'Experiências, conhecimentos, habilidades e decisões podem ajudar uma pessoa a construir sua carreira.'
+          'Profissão é uma área de atuação, enquanto carreira é o caminho profissional construído ao longo da vida.'
       },
 
       {
         id: 3,
-        type: 'text',
+
+        content:
+          'Também não é necessário saber exatamente onde se quer chegar desde o início. Novos interesses podem aparecer, oportunidades podem surgir e uma pessoa pode perceber que seus objetivos mudaram. Por isso, desenvolver uma carreira também significa estar disposto a aprender, avaliar escolhas e mudar de direção quando necessário.',
+
         question:
-          'É possível mudar de área profissional ao longo da carreira? Explique.',
+          'Por que uma pessoa pode mudar seus planos profissionais ao longo da carreira?',
+
         expectedAnswer:
-          'Sim. Uma pessoa pode descobrir novos interesses, desenvolver novas competências e decidir mudar de área ao longo da carreira.'
+          'Porque novos interesses, experiências, oportunidades e objetivos podem surgir ao longo do tempo.'
       }
     ]
   }
-]   
+]

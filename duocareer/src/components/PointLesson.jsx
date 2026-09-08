@@ -14,6 +14,8 @@ function PointLesson({ point, onBack }) {
   const [attempts, setAttempts] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
 
+  const [completedQuestions, setCompletedQuestions] = useState([])
+
   const currentQuestion = point.questions[questionIndex]
 
   useEffect(() => {
@@ -33,15 +35,25 @@ function PointLesson({ point, onBack }) {
     setResult(null)
 
     setTimeout(() => {
-      const evaluation = evaluateAnswer(answer, currentQuestion)
+      const evaluation = evaluateAnswer(
+        answer,
+        currentQuestion
+      )
 
       setIsAnalyzing(false)
-      setResult({
-        ...evaluation,
-        expectedAnswer: currentQuestion.expectedAnswer
-      })
 
-      if (evaluation.result !== 'correct') {
+      setResult(evaluation)
+
+      if (evaluation.result === 'correct') {
+        setCompletedQuestions((current) => [
+          ...current,
+          {
+            questionId: currentQuestion.id,
+            answer,
+            evaluation
+          }
+        ])
+      } else {
         setAttempts((current) => current + 1)
       }
     }, 2500)
@@ -61,10 +73,17 @@ function PointLesson({ point, onBack }) {
     setShowQuestion(false)
   }
 
+  function finishPoint() {
+    onBack()
+  }
+
   return (
     <section className="lesson">
 
-      <button className="back-button" onClick={onBack}>
+      <button
+        className="back-button"
+        onClick={onBack}
+      >
         ← Voltar
       </button>
 
@@ -80,100 +99,167 @@ function PointLesson({ point, onBack }) {
 
       </div>
 
-      <article className="lesson-content">
+      <div className="questions-container">
 
-        {point.content.map((paragraph, index) => (
-          <p key={index}>
-            {paragraph}
-          </p>
-        ))}
+        {point.questions.map((question, index) => {
 
-      </article>
+          if (index > questionIndex) {
+            return null
+          }
 
-      {showQuestion && (
-        <div className="question">
+          const isCurrent = index === questionIndex
 
-          <span className="question-label">
-            PERGUNTA {questionIndex + 1} DE {point.questions.length}
-          </span>
+          const completed = completedQuestions.find(
+            (item) => item.questionId === question.id
+          )
 
-          <h3>
-            {currentQuestion.question}
-          </h3>
+          return (
+            <div
+              className={`question ${
+                !isCurrent ? 'question-completed' : ''
+              }`}
+              key={question.id}
+            >
 
-          <textarea
-            value={answer}
-            onChange={(event) => setAnswer(event.target.value)}
-            placeholder="Escreva sua resposta..."
-            disabled={isAnalyzing}
-          />
+              {/* CONTEÚDO DA PERGUNTA */}
 
-          <button
-            className="check-button"
-            onClick={checkAnswer}
-            disabled={isAnalyzing}
-          >
-            {isAnalyzing ? 'ANALISANDO...' : 'VERIFICAR'}
-          </button>
+              <article className="question-content">
 
-          {isAnalyzing && (
-            <div className="loading-feedback">
-              Analisando sua resposta...
-            </div>
-          )}
+                <span className="content-label">
+                  CONTEÚDO
+                </span>
 
-          {result && !isAnalyzing && (
-            <div className={`feedback ${result.result}`}>
+                <p>{question.content}</p>
 
-              <strong>{result.message}</strong>
+              </article>
 
-              <p>{result.explanation}</p>
+              {/* PERGUNTA */}
 
-              {result.hint && attempts < 5 && (
-                <div className="hint">
-                  💡 {result.hint}
-                </div>
-              )}
+              <span className="question-label">
+                PERGUNTA {index + 1} DE {point.questions.length}
+              </span>
 
-              {showAnswer && (
-                <div className="expected-answer">
+              <h3>
+                {question.question}
+              </h3>
 
-                  <span>RESPOSTA ESPERADA</span>
+              {/* PERGUNTA JÁ RESPONDIDA */}
 
-                  <p>{result.expectedAnswer}</p>
+              {!isCurrent && completed && (
+                <div className="previous-answer">
+
+                  <span>SUA RESPOSTA</span>
+
+                  <p>{completed.answer}</p>
+
+                  <strong>✓ Respondida</strong>
 
                 </div>
               )}
 
-              {attempts >= 5 &&
-                !showAnswer &&
-                result.result !== 'correct' && (
+              {/* PERGUNTA ATUAL */}
+
+              {isCurrent && (
+                <>
+                  <textarea
+                    value={answer}
+                    onChange={(event) =>
+                      setAnswer(event.target.value)
+                    }
+                    placeholder="Escreva sua resposta..."
+                    disabled={isAnalyzing}
+                  />
 
                   <button
-                    className="reveal-button"
-                    onClick={() => setShowAnswer(true)}
+                    className="check-button"
+                    onClick={checkAnswer}
+                    disabled={isAnalyzing}
                   >
-                    REVELAR RESPOSTA
+                    {isAnalyzing
+                      ? 'ANALISANDO...'
+                      : 'VERIFICAR'}
                   </button>
 
-              )}
+                  {isAnalyzing && (
+                    <div className="loading-feedback">
+                      Analisando sua resposta...
+                    </div>
+                  )}
 
-              {(result.result === 'correct' || showAnswer) && (
-                <button
-                  className="next-button"
-                  onClick={nextQuestion}
-                >
-                  {questionIndex >= point.questions.length - 1
-                    ? 'CONCLUIR PONTO ✓'
-                    : 'PRÓXIMA PERGUNTA →'}
-                </button>
+                  {result && !isAnalyzing && (
+                    <div
+                      className={`feedback ${result.result}`}
+                    >
+
+                      <strong>
+                        {result.message}
+                      </strong>
+
+                      <p>
+                        {result.explanation}
+                      </p>
+
+                      {result.hint && attempts < 5 && (
+                        <div className="hint">
+                          💡 {result.hint}
+                        </div>
+                      )}
+
+                      {showAnswer && (
+                        <div className="expected-answer">
+
+                          <span>
+                            RESPOSTA ESPERADA
+                          </span>
+
+                          <p>
+                            {currentQuestion.expectedAnswer}
+                          </p>
+
+                        </div>
+                      )}
+
+                      {attempts >= 5 &&
+                        !showAnswer &&
+                        result.result !== 'correct' && (
+                          <button
+                            className="reveal-button"
+                            onClick={() =>
+                              setShowAnswer(true)
+                            }
+                          >
+                            REVELAR RESPOSTA
+                          </button>
+                        )}
+
+                      {(result.result === 'correct' ||
+                        showAnswer) && (
+                        <button
+                          className="next-button"
+                          onClick={
+                            questionIndex >=
+                            point.questions.length - 1
+                              ? finishPoint
+                              : nextQuestion
+                          }
+                        >
+                          {questionIndex >=
+                          point.questions.length - 1
+                            ? 'FINALIZAR ✓'
+                            : 'PRÓXIMA PERGUNTA →'}
+                        </button>
+                      )}
+
+                    </div>
+                  )}
+                </>
               )}
 
             </div>
-          )}
+          )
+        })}
 
-        </div>
-      )}
+      </div>
 
     </section>
   )
