@@ -4,6 +4,7 @@ import './App.css'
 
 import Point from './components/Point'
 import PointLesson from './components/PointLesson'
+import { points } from './data/points'
 
 function App() {
   const [selectedPoint, setSelectedPoint] = useState(null)
@@ -17,12 +18,17 @@ function App() {
   }
 
   if (selectedPoint !== null) {
-    return (
-      <PointLesson
-      onBack={closePoint} 
-      />
-    )
-  }
+  const point = points.find(
+    (item) => item.id === selectedPoint
+  )
+
+  return (
+    <PointLesson
+      point={point}
+      onBack={closePoint}
+    />
+  )
+}
 
   return (
     <main>

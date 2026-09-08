@@ -422,3 +422,28 @@ main {
 .reveal-button:active {
   transform: scale(0.98);
 }
+
+.next-button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #16171d;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.next-button:hover {
+  transform: scale(1.02);
+  filter: brightness(1.08);
+}
+
+.next-button:active {
+  transform: scale(0.98);
+}
