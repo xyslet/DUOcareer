@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 
 import { evaluateAnswer } from '../utils/answerEvaluator'
 
-function PointLesson({ point, onBack }) {
+function PointLesson({
+  point,
+  onBack,
+  onComplete
+}) {
   const [questionIndex, setQuestionIndex] = useState(0)
 
   const [showQuestion, setShowQuestion] = useState(false)
@@ -17,6 +21,9 @@ function PointLesson({ point, onBack }) {
   const [completedQuestions, setCompletedQuestions] = useState([])
 
   const currentQuestion = point.questions[questionIndex]
+
+  const [showCompletion, setShowCompletion] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -74,10 +81,26 @@ function PointLesson({ point, onBack }) {
   }
 
   function finishPoint() {
-    onBack()
+    onComplete()
+
+    setShowCompletion(true)
+
+    setTimeout(() => {
+      setShowCompletion(false)
+      setShowSummary(true)
+    }, 3000)
   }
 
   return (
+    <>
+    {showCompletion && (
+      <div className="completion-overlay">
+        <div className="completion-bar">
+          <h1>Ponto {point.id} Concluído!</h1>
+        </div>
+      </div>
+    )}
+
     <section className="lesson">
 
       <button
@@ -262,6 +285,65 @@ function PointLesson({ point, onBack }) {
       </div>
 
     </section>
+      {showSummary && (
+        <div className="summary-overlay">
+
+          <section className="point-summary">
+
+            <div className="summary-header">
+              <span>PONTO {point.id}</span>
+
+              <h1>{point.title}</h1>
+            </div>
+
+            <div className="summary-questions">
+
+              {point.questions.map((question, index) => (
+                <div
+                  className="summary-question"
+                  key={question.id}
+                >
+                  <span>Pergunta {index + 1}</span>
+
+                  <strong>✓ Respondida</strong>
+                </div>
+              ))}
+
+            </div>
+
+            <div className="summary-info">
+
+              <span>ESTADO</span>
+
+              <strong>
+                Concluído com sucesso!
+              </strong>
+
+            </div>
+
+            <div className="summary-buttons">
+
+              <button
+                className="summary-button secondary"
+                onClick={onBack}
+              >
+                IR PARA A TRILHA
+              </button>
+
+              <button
+                className="summary-button"
+                onClick={onBack}
+              >
+                PRÓXIMO PONTO
+              </button>
+
+            </div>
+
+          </section>
+
+        </div>
+      )}
+  </>
   )
 }
 
