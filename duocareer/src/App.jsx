@@ -14,15 +14,16 @@ function App() {
     2: 'locked',
     3: 'locked',
     4: 'locked',
-    5: 'locked',
-    6: 'locked',
-    7: 'locked',
-    8: 'locked',
-    9: 'locked',
-    10: 'locked'
+    5: 'locked'
   })
 
+  const [pointData, setPointData] = useState({})
+
   function openPoint(number) {
+    if (pointStatuses[number] === 'locked') {
+      return
+    }
+
     setSelectedPoint(number)
   }
 
@@ -30,30 +31,57 @@ function App() {
     setSelectedPoint(null)
   }
 
-  function completePoint(pointId) {
-    setPointStatuses((current) => ({
+  function completePoint(pointId, data) {
+    setPointStatuses((current) => {
+      const nextPoint = pointId + 1
+
+      return {
+        ...current,
+        [pointId]: 'completed',
+        ...(pointStatuses[nextPoint]
+          ? { [nextPoint]: 'current' }
+          : {})
+      }
+    })
+
+    setPointData((current) => ({
       ...current,
-      [pointId]: 'completed',
-      [pointId + 1]: 'current'
+      [pointId]: data
     }))
   }
 
-  if (selectedPoint !== null) {
-  const point = points.find(
-    (item) => item.id === selectedPoint
-  )
+  function resetPoint(pointId) {
+    setPointData((current) => {
+      const updated = { ...current }
 
-  return (
-    <PointLesson
-      point={point}
-      onBack={closePoint}
-      onComplete={() => completePoint(point.id)}
-    />
-  )
-}
+      delete updated[pointId]
+
+      return updated
+    })
+  }
+
+  if (selectedPoint !== null) {
+    const point = points.find(
+      (item) => item.id === selectedPoint
+    )
+
+    return (
+      <PointLesson
+        point={point}
+        onBack={closePoint}
+        onComplete={completePoint}
+        onReset={resetPoint}
+        savedData={pointData[selectedPoint]}
+        isCompleted={
+          pointStatuses[selectedPoint] === 'completed'
+        }
+      />
+    )
+  }
 
   return (
     <main>
+
       <header className="header">
         <h1>DUOcareer</h1>
 
@@ -72,17 +100,18 @@ function App() {
       </section>
 
       <section className="map">
-        <Point number={1} status="current" onClick={() => openPoint(1)} />
-        <Point number={2} status="locked" onClick={() => openPoint(2)} />
-        <Point number={3} status="locked" onClick={() => openPoint(3)} />
-        <Point number={4} status="locked" onClick={() => openPoint(4)} />
-        <Point number={5} status="locked" onClick={() => openPoint(5)} />
-        <Point number={6} status="locked" onClick={() => openPoint(6)} />
-        <Point number={7} status="locked" onClick={() => openPoint(7)} />
-        <Point number={8} status="locked" onClick={() => openPoint(8)} />
-        <Point number={9} status="locked" onClick={() => openPoint(9)} />
-        <Point number={10} status="locked" onClick={() => openPoint(10)} />
+
+        {points.map((point) => (
+          <Point
+            key={point.id}
+            number={point.id}
+            status={pointStatuses[point.id] || 'locked'}
+            onClick={() => openPoint(point.id)}
+          />
+        ))}
+
       </section>
+
     </main>
   )
 }

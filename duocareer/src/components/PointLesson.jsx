@@ -5,11 +5,19 @@ import { evaluateAnswer } from '../utils/answerEvaluator'
 function PointLesson({
   point,
   onBack,
-  onComplete
+  onComplete,
+  onReset,
+  savedData,
+  isCompleted
 }) {
-  const [questionIndex, setQuestionIndex] = useState(0)
+  const [questionIndex, setQuestionIndex] = useState(
+    savedData ? point.questions.length - 1 : 0
+  )
 
-  const [showQuestion, setShowQuestion] = useState(false)
+  const [showQuestion, setShowQuestion] = useState(
+    Boolean(savedData)
+  )
+
   const [answer, setAnswer] = useState('')
   const [result, setResult] = useState(null)
 
@@ -18,20 +26,43 @@ function PointLesson({
   const [attempts, setAttempts] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
 
-  const [completedQuestions, setCompletedQuestions] = useState([])
-
-  const currentQuestion = point.questions[questionIndex]
+  const [completedQuestions, setCompletedQuestions] =
+    useState(savedData?.answers || [])
 
   const [showCompletion, setShowCompletion] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
 
+  const [startTime] = useState(
+    savedData?.startTime || Date.now()
+  )
+
+  const currentQuestion = point.questions[questionIndex]
+
   useEffect(() => {
+    if (!savedData) {
+      setAnswer('')
+      return
+    }
+
+    const savedAnswer =
+      savedData.answers?.find(
+        (item) => item.questionId === currentQuestion.id
+      )?.answer || ''
+
+    setAnswer(savedAnswer)
+  }, [currentQuestion.id, savedData])
+
+  useEffect(() => {
+    if (savedData) {
+      return
+    }
+
     const timer = setTimeout(() => {
       setShowQuestion(true)
     }, 5000)
 
     return () => clearTimeout(timer)
-  }, [questionIndex])
+  }, [questionIndex, savedData])
 
   function checkAnswer() {
     if (answer.trim() === '') {
@@ -48,26 +79,81 @@ function PointLesson({
       )
 
       setIsAnalyzing(false)
-
       setResult(evaluation)
 
       if (evaluation.result === 'correct') {
-        setCompletedQuestions((current) => [
-          ...current,
-          {
-            questionId: currentQuestion.id,
-            answer,
-            evaluation
-          }
-        ])
+        saveAnswer(evaluation)
       } else {
         setAttempts((current) => current + 1)
       }
     }, 2500)
   }
 
+  function saveAnswer(evaluation) {
+    setCompletedQuestions((current) => {
+      const alreadyAnswered = current.some(
+        (item) =>
+          item.questionId === currentQuestion.id
+      )
+
+      if (alreadyAnswered) {
+        return current
+      }
+
+      return [
+        ...current,
+        {
+          questionId: currentQuestion.id,
+          answer,
+          result: evaluation.result
+        }
+      ]
+    })
+  }
+
+  function revealAnswer() {
+    setShowAnswer(true)
+
+    saveAnswer({
+      result: 'revealed'
+    })
+  }
+
   function nextQuestion() {
     if (questionIndex >= point.questions.length - 1) {
+      const finalAnswers = completedQuestions.some(
+        (item) =>
+          item.questionId === currentQuestion.id
+      )
+        ? completedQuestions
+        : [
+            ...completedQuestions,
+            {
+              questionId: currentQuestion.id,
+              answer: answer.trim(),
+              result: showAnswer
+                ? 'revealed'
+                : 'correct'
+            }
+          ]
+
+      setCompletedQuestions(finalAnswers)
+
+      const elapsedTime = Date.now() - startTime
+
+      onComplete(point.id, {
+        startTime,
+        elapsedTime,
+        answers: finalAnswers
+      })
+
+      setShowCompletion(true)
+
+      setTimeout(() => {
+        setShowCompletion(false)
+        setShowSummary(true)
+      }, 3000)
+
       return
     }
 
@@ -80,238 +166,308 @@ function PointLesson({
     setShowQuestion(false)
   }
 
-  function finishPoint() {
-    onComplete()
-
-    setShowCompletion(true)
-
-    setTimeout(() => {
-      setShowCompletion(false)
-      setShowSummary(true)
-    }, 3000)
+  function reopenStatistics() {
+    setShowSummary(true)
   }
+
+  function resetLesson() {
+    const confirmed = window.confirm(
+      'Tem certeza que deseja refazer este Ponto?\n\nSuas respostas serão apagadas, mas o progresso e o estado de Ponto concluído serão mantidos.'
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    onReset(point.id)
+
+    setQuestionIndex(0)
+    setShowQuestion(false)
+    setAnswer('')
+    setResult(null)
+    setAttempts(0)
+    setShowAnswer(false)
+    setCompletedQuestions([])
+    setShowSummary(false)
+  }
+
+  function formatTime(milliseconds) {
+    const totalSeconds = Math.floor(
+      milliseconds / 1000
+    )
+
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+
+    return `${String(minutes).padStart(2, '0')}:${String(
+      seconds
+    ).padStart(2, '0')}`
+  }
+
+  const savedTime = savedData?.elapsedTime || 0
 
   return (
     <>
-    {showCompletion && (
-      <div className="completion-overlay">
-        <div className="completion-bar">
-          <h1>Ponto {point.id} Concluído!</h1>
+      {showCompletion && (
+        <div className="completion-overlay">
+          <div className="completion-bar">
+            <h1>Ponto {point.id} Concluído!</h1>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    <section className="lesson">
+      <section className="lesson">
 
-      <button
-        className="back-button"
-        onClick={onBack}
-      >
-        ← Voltar
-      </button>
+        <button
+          className="back-button"
+          onClick={onBack}
+        >
+          ← Voltar
+        </button>
 
-      <div className="lesson-header">
+        <div className="lesson-header">
 
-        <span className="lesson-number">
-          PONTO {point.id}
-        </span>
+          <span className="lesson-number">
+            PONTO {point.id}
+          </span>
 
-        <h2>{point.title}</h2>
+          <h2>{point.title}</h2>
 
-        <p>{point.introduction}</p>
+          <p>{point.introduction}</p>
 
-      </div>
+        </div>
 
-      <div className="questions-container">
+        <div className="questions-container">
 
-        {point.questions.map((question, index) => {
+          {point.questions.map((question, index) => {
 
-          if (index > questionIndex) {
-            return null
-          }
+            if (index > questionIndex) {
+              return null
+            }
 
-          const isCurrent = index === questionIndex
+            const isCurrent = index === questionIndex
 
-          const completed = completedQuestions.find(
-            (item) => item.questionId === question.id
-          )
+            const completed = completedQuestions.find(
+              (item) =>
+                item.questionId === question.id
+            )
 
-          return (
-            <div
-              className={`question ${
-                !isCurrent ? 'question-completed' : ''
-              }`}
-              key={question.id}
-            >
+            return (
+              <div
+                className={`question ${
+                  !isCurrent
+                    ? 'question-completed'
+                    : ''
+                }`}
+                key={question.id}
+              >
 
-              {/* CONTEÚDO DA PERGUNTA */}
+                <article className="question-content">
 
-              <article className="question-content">
+                  <span className="content-label">
+                    CONTEÚDO
+                  </span>
 
-                <span className="content-label">
-                  CONTEÚDO
+                  <p>{question.content}</p>
+
+                </article>
+
+                <span className="question-label">
+                  PERGUNTA {index + 1} DE{' '}
+                  {point.questions.length}
                 </span>
 
-                <p>{question.content}</p>
+                <h3>{question.question}</h3>
 
-              </article>
+                {!isCurrent && completed && (
+                  <div className="previous-answer">
 
-              {/* PERGUNTA */}
+                    <span>SUA RESPOSTA</span>
 
-              <span className="question-label">
-                PERGUNTA {index + 1} DE {point.questions.length}
-              </span>
+                    <p>{completed.answer}</p>
 
-              <h3>
-                {question.question}
-              </h3>
+                    <strong>
+                      ✓ Respondida
+                    </strong>
 
-              {/* PERGUNTA JÁ RESPONDIDA */}
+                  </div>
+                )}
 
-              {!isCurrent && completed && (
-                <div className="previous-answer">
+                {isCurrent && (
+                  <>
+                    <textarea
+                      value={answer}
+                      onChange={(event) =>
+                        setAnswer(event.target.value)
+                      }
+                      placeholder="Escreva sua resposta..."
+                      disabled={isAnalyzing}
+                    />
 
-                  <span>SUA RESPOSTA</span>
-
-                  <p>{completed.answer}</p>
-
-                  <strong>✓ Respondida</strong>
-
-                </div>
-              )}
-
-              {/* PERGUNTA ATUAL */}
-
-              {isCurrent && (
-                <>
-                  <textarea
-                    value={answer}
-                    onChange={(event) =>
-                      setAnswer(event.target.value)
-                    }
-                    placeholder="Escreva sua resposta..."
-                    disabled={isAnalyzing}
-                  />
-
-                  <button
-                    className="check-button"
-                    onClick={checkAnswer}
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing
-                      ? 'ANALISANDO...'
-                      : 'VERIFICAR'}
-                  </button>
-
-                  {isAnalyzing && (
-                    <div className="loading-feedback">
-                      Analisando sua resposta...
-                    </div>
-                  )}
-
-                  {result && !isAnalyzing && (
-                    <div
-                      className={`feedback ${result.result}`}
+                    <button
+                      className="check-button"
+                      onClick={checkAnswer}
+                      disabled={isAnalyzing}
                     >
+                      {isAnalyzing
+                        ? 'ANALISANDO...'
+                        : 'VERIFICAR'}
+                    </button>
 
-                      <strong>
-                        {result.message}
-                      </strong>
+                    {isAnalyzing && (
+                      <div className="loading-feedback">
+                        Analisando sua resposta...
+                      </div>
+                    )}
 
-                      <p>
-                        {result.explanation}
-                      </p>
+                    {result && !isAnalyzing && (
+                      <div
+                        className={`feedback ${result.result}`}
+                      >
 
-                      {result.hint && attempts < 5 && (
-                        <div className="hint">
-                          💡 {result.hint}
-                        </div>
-                      )}
+                        <strong>
+                          {result.message}
+                        </strong>
 
-                      {showAnswer && (
-                        <div className="expected-answer">
+                        <p>
+                          {result.explanation}
+                        </p>
 
-                          <span>
-                            RESPOSTA ESPERADA
-                          </span>
+                        {result.hint &&
+                          attempts < 5 && (
+                            <div className="hint">
+                              💡 {result.hint}
+                            </div>
+                          )}
 
-                          <p>
-                            {currentQuestion.expectedAnswer}
-                          </p>
+                        {showAnswer && (
+                          <div className="expected-answer">
 
-                        </div>
-                      )}
+                            <span>
+                              RESPOSTA ESPERADA
+                            </span>
 
-                      {attempts >= 5 &&
-                        !showAnswer &&
-                        result.result !== 'correct' && (
+                            <p>
+                              {currentQuestion.expectedAnswer}
+                            </p>
+
+                          </div>
+                        )}
+
+                        {attempts >= 5 &&
+                          !showAnswer &&
+                          result.result !== 'correct' && (
+                            <button
+                              className="reveal-button"
+                              onClick={revealAnswer}
+                            >
+                              REVELAR RESPOSTA
+                            </button>
+                          )}
+
+                        {(result.result === 'correct' ||
+                          showAnswer) && (
                           <button
-                            className="reveal-button"
-                            onClick={() =>
-                              setShowAnswer(true)
-                            }
+                            className="next-button"
+                            onClick={nextQuestion}
                           >
-                            REVELAR RESPOSTA
+                            {questionIndex >=
+                            point.questions.length - 1
+                              ? 'FINALIZAR ✓'
+                              : 'PRÓXIMA PERGUNTA →'}
                           </button>
                         )}
 
-                      {(result.result === 'correct' ||
-                        showAnswer) && (
-                        <button
-                          className="next-button"
-                          onClick={
-                            questionIndex >=
-                            point.questions.length - 1
-                              ? finishPoint
-                              : nextQuestion
-                          }
-                        >
-                          {questionIndex >=
-                          point.questions.length - 1
-                            ? 'FINALIZAR ✓'
-                            : 'PRÓXIMA PERGUNTA →'}
-                        </button>
-                      )}
+                      </div>
+                    )}
+                  </>
+                )}
 
-                    </div>
-                  )}
-                </>
-              )}
+              </div>
+            )
+          })}
 
-            </div>
-          )
-        })}
+        </div>
 
-      </div>
+        {isCompleted && (
+          <div className="completed-actions">
 
-    </section>
+            <button
+              className="completed-action"
+              onClick={reopenStatistics}
+            >
+              VER ESTATÍSTICAS
+            </button>
+
+            <button
+              className="completed-action secondary"
+              onClick={resetLesson}
+            >
+              REFAZER
+            </button>
+
+          </div>
+        )}
+
+      </section>
+
       {showSummary && (
         <div className="summary-overlay">
 
           <section className="point-summary">
 
             <div className="summary-header">
-              <span>PONTO {point.id}</span>
+
+              <span>
+                PONTO {point.id}
+              </span>
 
               <h1>{point.title}</h1>
+
             </div>
 
             <div className="summary-questions">
 
-              {point.questions.map((question, index) => (
-                <div
-                  className="summary-question"
-                  key={question.id}
-                >
-                  <span>Pergunta {index + 1}</span>
+              {point.questions.map(
+                (question, index) => {
 
-                  <strong>✓ Respondida</strong>
-                </div>
-              ))}
+                  const answer =
+                    completedQuestions.find(
+                      (item) =>
+                        item.questionId ===
+                        question.id
+                    )
+
+                  return (
+                    <div
+                      className="summary-question"
+                      key={question.id}
+                    >
+
+                      <span>
+                        Pergunta {index + 1}
+                      </span>
+
+                      <strong>
+                        {answer
+                          ? '✓ Respondida'
+                          : '— Não respondida'}
+                      </strong>
+
+                    </div>
+                  )
+                }
+              )}
 
             </div>
 
             <div className="summary-info">
+
+              <span>TEMPO</span>
+
+              <strong>
+                {formatTime(savedTime)}
+              </strong>
 
               <span>ESTADO</span>
 
@@ -324,7 +480,7 @@ function PointLesson({
             <div className="summary-buttons">
 
               <button
-                className="summary-button secondary"
+                className="summary-button"
                 onClick={onBack}
               >
                 IR PARA A TRILHA
@@ -332,9 +488,11 @@ function PointLesson({
 
               <button
                 className="summary-button"
-                onClick={onBack}
+                onClick={() => {
+                  setShowSummary(false)
+                }}
               >
-                PRÓXIMO PONTO
+                VOLTAR AO PONTO
               </button>
 
             </div>
@@ -343,7 +501,8 @@ function PointLesson({
 
         </div>
       )}
-  </>
+
+    </>
   )
 }
 

@@ -1,128 +1,119 @@
+const STOP_WORDS = new Set([
+  'a', 'as', 'ao', 'aos', 'e', 'em', 'de', 'do', 'da', 'dos', 'das',
+  'com', 'para', 'por', 'que', 'quem', 'um', 'uma', 'uns', 'umas',
+  'no', 'na', 'nos', 'nas', 'se', 'sem', 'ser', 'sao', 'são', 'mais',
+  'mas', 'como', 'ou', 'entao', 'então', 'tambem', 'também', 'sua',
+  'seu', 'sua', 'me', 'te', 'nos', 'vos', 'este', 'esta', 'estes',
+  'estas', 'esse', 'essa', 'esses', 'essas', 'isso', 'aquilo', 'não',
+  'nao', 'sim', 'nunca', 'sempre', 'muito', 'muita', 'muitos', 'muitas'
+])
+
+function normalizeText(text = '') {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractKeywords(text = '') {
+  const normalized = normalizeText(text)
+
+  if (!normalized) {
+    return []
+  }
+
+  return [...new Set(
+    normalized
+      .split(' ')
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
+  )]
+}
+
+function getCoverage(answerText, expectedText) {
+  const answerNormalized = normalizeText(answerText)
+  const expectedNormalized = normalizeText(expectedText)
+
+  if (!answerNormalized || !expectedNormalized) {
+    return 0
+  }
+
+  const expectedKeywords = extractKeywords(expectedText)
+  const answerKeywords = new Set(extractKeywords(answerText))
+
+  if (expectedKeywords.length === 0) {
+    return 0
+  }
+
+  const matchedKeywords = expectedKeywords.filter((keyword) =>
+    answerKeywords.has(keyword) || answerNormalized.includes(keyword)
+  )
+
+  return matchedKeywords.length / expectedKeywords.length
+}
+
 export function evaluateAnswer(answer, question) {
-  const text = answer.toLowerCase().trim()
+  const text = typeof answer === 'string' ? answer.trim() : ''
 
-  // PERGUNTA 1
-  if (question.id === 1) {
-    const concepts = [
-      text.includes('tempo'),
-      text.includes('experiência') || text.includes('experiencia'),
-      text.includes('conhecimento'),
-      text.includes('habilidade'),
-      text.includes('aprender'),
-      text.includes('desenvolv')
-    ]
-
-    const correctConcepts = concepts.filter(Boolean).length
-
-    if (correctConcepts >= 2) {
-      return {
-        result: 'correct',
-        message: 'Na mosca! 🎯',
-        explanation:
-          'Você entendeu que a carreira é construída gradualmente por meio de experiências e aprendizados.',
-        hint: null
-      }
-    }
-
-    if (correctConcepts === 1) {
-      return {
-        result: 'almost',
-        message: 'Hmm... é quase isso.',
-        explanation:
-          'Você identificou parte da ideia, mas sua resposta ainda está um pouco vaga.',
-        hint:
-          'Pense nas experiências e aprendizados que uma pessoa acumula ao longo do tempo.'
-      }
+  if (!text) {
+    return {
+      result: 'incorrect',
+      message: 'Parece que você não respondeu ainda.',
+      explanation: 'Tente escrever sua resposta antes de enviar.',
+      hint: 'Reflita sobre o que a pergunta pede e responda em uma frase completa.'
     }
   }
 
-  // PERGUNTA 2
-  if (question.id === 2) {
-    const mentionsProfession =
-      text.includes('profissão') ||
-      text.includes('profissao') ||
-      text.includes('área') ||
-      text.includes('area') ||
-      text.includes('atuação') ||
-      text.includes('atuacao')
-
-    const mentionsCareer =
-      text.includes('carreira') ||
-      text.includes('caminho') ||
-      text.includes('vida profissional') ||
-      text.includes('experiência') ||
-      text.includes('experiencia')
-
-    if (mentionsProfession && mentionsCareer) {
-      return {
-        result: 'correct',
-        message: 'Muito bem! 🚀',
-        explanation:
-          'Você diferenciou uma profissão de uma carreira e entendeu como os dois conceitos se relacionam.',
-        hint: null
-      }
-    }
-
-    if (mentionsProfession || mentionsCareer) {
-      return {
-        result: 'almost',
-        message: 'Tá perto, mas não é bem isso.',
-        explanation:
-          'Você mencionou um dos conceitos, mas ainda não explicou completamente a diferença.',
-        hint:
-          'Tente pensar em uma área de atuação e no caminho profissional construído ao longo da vida.'
-      }
+  if (!question || !question.expectedAnswer) {
+    return {
+      result: 'incorrect',
+      message: 'Não foi possível validar essa resposta.',
+      explanation: 'A pergunta ainda não possui uma resposta esperada definida.',
+      hint: null
     }
   }
 
-  // PERGUNTA 3
-  if (question.id === 3) {
-    const mentionsChange =
-      text.includes('mudar') ||
-      text.includes('mudança') ||
-      text.includes('mudanca') ||
-      text.includes('alterar') ||
-      text.includes('novo') ||
-      text.includes('novos')
+  const answerNormalized = normalizeText(text)
+  const expectedNormalized = normalizeText(question.expectedAnswer)
+  const coverage = getCoverage(text, question.expectedAnswer)
 
-    const mentionsReason =
-      text.includes('interesse') ||
-      text.includes('oportunidade') ||
-      text.includes('experiência') ||
-      text.includes('experiencia') ||
-      text.includes('objetivo') ||
-      text.includes('competência') ||
-      text.includes('competencia')
+  const hasKeyIdeas =
+    answerNormalized.length >= 20 && coverage >= 0.45
 
-    if (mentionsChange && mentionsReason) {
-      return {
-        result: 'correct',
-        message: 'Na mosca! 🎯',
-        explanation:
-          'Você entendeu que os planos profissionais podem mudar conforme novas experiências, interesses, oportunidades e objetivos surgem.',
-        hint: null
-      }
-    }
+  const hasStrongMatch =
+    coverage >= 0.6 ||
+    answerNormalized.includes(expectedNormalized.slice(0, 40)) ||
+    (answerNormalized.includes('porque') && coverage >= 0.4)
 
-    if (mentionsChange || mentionsReason) {
-      return {
-        result: 'almost',
-        message: 'Hmm... é quase isso.',
-        explanation:
-          'Você percebeu que mudanças podem acontecer, mas faltou explicar melhor o motivo.',
-        hint:
-          'Pense no que pode fazer uma pessoa mudar seus objetivos profissionais.'
-      }
+  if (hasStrongMatch || hasKeyIdeas) {
+    return {
+      result: 'correct',
+      message: 'Na mosca! 🎯',
+      explanation:
+        'Sua resposta conversa com a ideia principal esperada e mostra entendimento do tema.',
+      hint: null
     }
   }
 
-  // RESPOSTA INCORRETA
+  if (coverage >= 0.25 || answerNormalized.length >= 12) {
+    return {
+      result: 'almost',
+      message: 'Tá perto, mas dá para melhorar.',
+      explanation:
+        'Você trouxe parte da ideia principal, mas ainda faltou reforçar alguns pontos importantes.',
+      hint:
+        'Tente incluir a ideia central da resposta esperada com mais clareza.'
+    }
+  }
+
   return {
     result: 'incorrect',
     message: 'Não é isso... tente dar uma olhadinha novamente!',
     explanation:
-      'Sua resposta ainda não demonstra completamente o conceito apresentado.',
+      'Sua resposta ainda não está alinhada com a ideia central esperada para essa pergunta.',
     hint:
-      'Volte ao conteúdo acima e tente relacionar sua resposta com o que acabou de estudar.'
+      'Volte ao conteúdo da aula e tente responder com os conceitos principais da pergunta.'
   }
 }

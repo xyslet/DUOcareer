@@ -91,8 +91,7 @@ main {
   border-radius: 50%;
   border: 2px solid var(--accent-border);
 
-  background: var(--accent-bg);
-  color: var(--text-h);
+  background: var(--point-background, var(--accent-bg));
 
   font-size: 1.5rem;
   font-weight: bold;
@@ -134,16 +133,19 @@ main {
 }
 
 .point.completed {
-  background: var(--accent);
+  background: #2EE59D;
+  border-color: #2EE59D;
   color: #16171d;
+
+  
+  box-shadow: 0 0 10px 5px rgba(110, 231, 183, 0.12);
 }
 
 .point.current {
   background: var(--accent-bg);
-  border-color: var(--accent);
 
   box-shadow:
-    0 0 0 5px var(--accent-bg);
+    0 0 10px 5px var(--accent-bg);
 }
 
 .point.locked {
@@ -903,4 +905,43 @@ main {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.completed-actions {
+  display: flex;
+  gap: 12px;
+
+  margin-top: 35px;
+}
+
+.completed-action {
+  flex: 1;
+
+  padding: 14px 20px;
+
+  border: none;
+  border-radius: 12px;
+
+  background: var(--accent);
+  color: #16171d;
+
+  font-size: 0.95rem;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease;
+}
+
+.completed-action:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+.completed-action.secondary {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
 }
