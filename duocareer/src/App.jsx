@@ -1,13 +1,19 @@
-import { useState } from 'react'
+
+import { useState, useEffect } from 'react'
 
 import './App.css'
 
 import Point from './components/Point'
 import PointLesson from './components/PointLesson'
-import { points } from './data/points'
+import { points as localPoints } from './data/points'
 
 function App() {
   const [selectedPoint, setSelectedPoint] = useState(null)
+
+  const [displayPoints, setDisplayPoints] = useState(localPoints)
+
+  const [loading, setLoading] = useState(true)
+  const [apiError, setApiError] = useState(false)
 
   const [pointStatuses, setPointStatuses] = useState({
     1: 'current',
@@ -18,6 +24,56 @@ function App() {
   })
 
   const [pointData, setPointData] = useState({})
+
+  // Busca os pontos na API
+  useEffect(() => {
+    async function loadPoints() {
+      try {
+        const response = await fetch(
+          'http://localhost:3000/api/points'
+        )
+
+        if (!response.ok) {
+          throw new Error('Erro ao buscar pontos')
+        }
+
+        const result = await response.json()
+
+        if (!result.success || !Array.isArray(result.data)) {
+          throw new Error('Formato de resposta inválido')
+        }
+
+        // Mantém as perguntas e introduções das aulas locais
+        const updatedPoints = result.data.map((apiPoint) => {
+          const localPoint = localPoints.find(
+            (point) => point.id === apiPoint.id
+          )
+
+          if (!localPoint) return null
+
+          return {
+            ...localPoint,
+            ...apiPoint,
+            introduction: localPoint.introduction,
+            questions: localPoint.questions
+          }
+        }).filter(Boolean)
+
+        if (updatedPoints.length > 0) {
+          setDisplayPoints(updatedPoints)
+        }
+
+      } catch (error) {
+        console.error('Erro ao carregar pontos:', error)
+        setApiError(true)
+
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadPoints()
+  }, [])
 
   function openPoint(number) {
     if (pointStatuses[number] === 'locked') {
@@ -38,7 +94,7 @@ function App() {
       return {
         ...current,
         [pointId]: 'completed',
-        ...(pointStatuses[nextPoint]
+        ...(current[nextPoint]
           ? { [nextPoint]: 'current' }
           : {})
       }
@@ -60,10 +116,15 @@ function App() {
     })
   }
 
+  // Tela da aula selecionada
   if (selectedPoint !== null) {
-    const point = points.find(
+    const point = displayPoints.find(
       (item) => item.id === selectedPoint
     )
+
+    if (!point) {
+      return null
+    }
 
     return (
       <PointLesson
@@ -79,6 +140,7 @@ function App() {
     )
   }
 
+  // Mapa principal
   return (
     <main>
 
@@ -99,9 +161,22 @@ function App() {
         </p>
       </section>
 
+      {loading && (
+        <p className="api-loading">
+          Carregando pontos...
+        </p>
+      )}
+
+      {apiError && (
+        <p className="api-error">
+          Não foi possível conectar à API.
+          Exibindo os pontos locais.
+        </p>
+      )}
+
       <section className="map">
 
-        {points.map((point) => (
+        {displayPoints.map((point) => (
           <Point
             key={point.id}
             number={point.id}
